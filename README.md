@@ -2,7 +2,7 @@
 
 > IGEM-FBH 团队的 AI 虚拟主播 | Bilibili 直播互动 | 知识库驱动的合成生物学宣传者
 
-![Python 3.10+](https://img.shields.io/badge/Python-3.10~3.11-blue)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
 ![License](https://img.shields.io/badge/License-MIT-orange)
 ![AI VTuber](https://img.shields.io/badge/AI%20VTuber-blue)
 ![Bilibili](https://img.shields.io/badge/Bilibili-fb7299)
@@ -21,36 +21,61 @@
 
 **许可证**: MIT License (Copyright AkagawaTsurunaki)
 
-## 定制功能
+## 主要功能
 
-- IGEM 知识库集成
-- 合成生物学内容问答
-- 情感记忆系统
-- 自主行为驱动
-- Bilibili 弹幕互动
+- **IGEM 知识库**：合成生物学相关问答与文档检索
+- **情感记忆系统**：长期记忆与情感追踪
+- **Bilibili 互动**：弹幕接收与智能回复
+- **多模态 AI**：语音识别(ASR)、语音合成(TTS)、视觉语言动作(VLA)
+- **RAG 检索增强**：基于向量数据库的知识库问答
+- **自主行为**：AI 驱动的自发动作与互动
 
 ## 目录结构
 
 ```
 IGEM-sama/
 ├── ZerolanLiveRobot-2.3.0/     # 主程序
-│   ├── agent/                   # AI Agent
-│   ├── autonomous/              # 自主行为
-│   ├── emotion/                 # 情感系统
-│   ├── features/                # 功能模块
-│   ├── knowledge_base/          # 知识库
-│   ├── memory/                  # 记忆系统
-│   ├── perception/              # 感知模块
-│   ├── pipeline/                # 处理流水线
-│   └── ...
-├── zerolan-core-1.4/            # 多模态 AI 核心
-│   ├── asr/                     # 语音识别
-│   ├── tts/                     # 语音合成
-│   ├── llm/                     # 大语言模型
-│   ├── vla/                     # 视觉语言动作
-│   └── ...
-└── zerolan-data-1.5.0/          # 数据处理与 RAG
-    └── ...
+│   ├── agent/                  # AI Agent 与工具集
+│   ├── autonomous/             # 自主行为系统
+│   ├── emotion/                # 情感追踪
+│   ├── features/               # 功能模块 (会议追踪/任务看板等)
+│   ├── knowledge_base/         # 知识库与 RAG
+│   ├── memory/                 # 短/长期记忆
+│   ├── perception/             # 感知处理
+│   ├── pipeline/               # AI 处理流水线 (ASR/TTS/LLM等)
+│   ├── services/               # 服务层 (Live2D/Bilibili/OBS等)
+│   └── requirements.txt        # Python 依赖
+├── zerolan-core-1.4/           # 多模态 AI 核心
+│   ├── asr/                    # 语音识别 (Whisper/Paraformer)
+│   ├── tts/                    # 语音合成 (GPT-SoVITS)
+│   ├── llm/                    # 大语言模型 (ChatGLM/DeepSeek/Qwen等)
+│   ├── vla/                    # 视觉语言动作 (ShowUI)
+│   ├── ocr/                    # 光学字符识别
+│   ├── img_cap/                # 图像描述
+│   └── vid_cap/                # 视频理解
+└── zerolan-data-1.5.0/         # 数据处理与 RAG
+    ├── pipeline/                # 数据处理流水线
+    └── src/                     # 核心数据结构
+```
+
+## 环境要求
+
+- Python 3.10+
+- FFmpeg
+- Milvus 向量数据库 (可选，用于 RAG)
+
+## 安装
+
+```bash
+# 克隆仓库
+git clone https://github.com/RomanCohort/IGEM-sama.git
+cd IGEM-sama
+
+# 安装主程序依赖
+cd ZerolanLiveRobot-2.3.0
+pip install -r requirements.txt
+
+# 配置 API Key (编辑 config.yaml 或 config.igem-sama.yaml)
 ```
 
 ## 运行
@@ -62,14 +87,39 @@ IGEM-sama/
 # Windows
 start_igem_sama.bat
 
-# Docker
+# Docker (需要先配置)
 docker-compose up
 ```
 
-## 依赖
+## 配置
 
-详见各子模块的 requirements.txt 和 pyproject.toml
+编辑 `ZerolanLiveRobot-2.3.0/config.igem-sama.yaml`：
+
+```yaml
+llm:
+  api_key: "your-api-key"
+  model: "deepseek-chat"
+
+bilibili:
+  room_id: 你的直播间号
+
+knowledge_base:
+  enabled: true
+  milvus_uri: "http://localhost:19530"
+```
+
+## 子模块
+
+| 模块 | 说明 | 依赖 |
+|------|------|------|
+| zerolan-core | 多模态 AI 核心框架 | torch, transformers |
+| zerolan-data | RAG 数据管道 | langchain, milvus-haystack |
 
 ## 许可证
 
-本项目继承 MIT License，详见 LICENSE 文件。
+本项目继承 MIT License。
+- ZerolanLiveRobot: MIT (Copyright AkagawaTsurunaki)
+- zerolan-core: MIT
+- zerolan-data: MIT
+
+详见各子模块 LICENSE 文件。

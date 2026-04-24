@@ -1,0 +1,52 @@
+[project]
+name = "igem-sama"
+version = "2.3.0"
+description = "IGEM-FBH AI VTuber - 基于 ZerolanLiveRobot 定制开发的虚拟主播"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "IGEM-FBH Team"}
+]
+keywords = ["vtuber", "ai", "bilibili", "igem", "rag", "emotion"]
+
+dependencies = [
+    "pydantic<=2.11",
+    "pyaudio",
+    "soundfile",
+    "pydub",
+    "pillow",
+    "scipy",
+    "pyautogui",
+    "pygame",
+    "pyyaml",
+    "flask",
+    "selenium",
+    "numpy==1.26.4",
+    "retry",
+    "requests",
+    "loguru",
+    "websockets",
+    "langchain",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ZerolanLiveRobot*"]
+
+[tool.black]
+line-length = 100
+
+[tool.ruff]
+line-length = 100
