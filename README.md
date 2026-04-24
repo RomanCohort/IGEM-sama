@@ -11,9 +11,10 @@
 
 ## 项目来源与致谢
 
-本项目基于 [ZerolanLiveRobot](https://github.com/AkagawaTsurunaki/ZerolanLiveRobot) 进行开发，为 IGEM-FBH 团队定制。
+本项目主体来自 [fake-neuro](https://github.com/zyl9737/fake-neuro)（基于 ZerolanLiveRobot 二次开发），为 IGEM-FBH 团队进一步定制。
 
 **原始项目**：
+- fake-neuro: https://github.com/zyl9737/fake-neuro
 - ZerolanLiveRobot: https://github.com/AkagawaTsurunaki/ZerolanLiveRobot
 - zerolan-core: 多模态 AI 核心 (ASR/TTS/LLM/VLA)
 - zerolan-data: 数据处理与 RAG 知识库
