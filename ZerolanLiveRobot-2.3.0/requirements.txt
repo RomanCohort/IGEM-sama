@@ -1,0 +1,49 @@
+# If dev branch, uncomment following
+# git+https://github.com/AkagawaTsurunaki/zerolan-data.git@dev
+git+https://github.com/AkagawaTsurunaki/zerolan-data.git@1.5.0
+pydantic<=2.11
+pyaudio
+soundfile
+pydub
+pillow
+scipy
+pyautogui
+pygame
+pyyaml
+flask
+selenium
+numpy==1.26.4
+retry
+requests
+loguru
+websockets
+langchain
+langgraph
+langchain-core
+beautifulsoup4
+bilibili-api-python
+twitchAPI
+python-magic
+transitions
+netifaces
+injector
+typeguard
+watchdog
+openai
+gradio
+webrtcvad
+live2d-py>=0.6.0 # Windows only, Python 3.13+
+pynput  # devices/keyboard.py
+ncatbot==4.4.1.post1 # QQ bot
+# If Linux, uncomment following
+# mss
+PyQt5
+librosa
+# Voice conversion (optional, enable for RVC voice cloning)
+# rvc-python
+# torch
+# Multimodal perception (optional, enable for visual change detection)
+# imagehash
+# If you are not a developer, you can skip the following packages
+pytest
+pytest-asyncio

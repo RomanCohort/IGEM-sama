@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IGEM-sama 直播间</title>
+<style>
+:root {
+  --bg: #0d1117; --card: #161b22; --border: #30363d; --text: #e6edf3;
+  --muted: #8b949e; --bilibili-pink: #fb7299; --bilibili-blue: #23ade5;
+  --success: #3fb950; --warn: #d29922; --accent: #fb7299;
+  --sc-gold: #f6c656; --sc-bg: #2a2520;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+
+/* ===== HEADER (Bilibili-style top bar) ===== */
+.header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px; display: flex; align-items: center; justify-content: space-between; height: 50px;
+}
+.header-left { display: flex; align-items: center; gap: 14px; }
+.header-logo { color: var(--bilibili-pink); font-size: 20px; font-weight: bold; letter-spacing: 1px; }
+.header-room { display: flex; align-items: center; gap: 8px; }
+.live-badge { background: var(--bilibili-pink); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; letter-spacing: 1px; animation: livePulse 2s ease-in-out infinite; }
+@keyframes livePulse { 0%,100% { opacity: 1; } 50% { opacity: 0.7; } }
+.room-title { font-size: 14px; color: var(--text); }
+.room-category { font-size: 11px; color: var(--muted); background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 10px; }
+.header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; color: var(--muted); }
+.viewer-count { display: flex; align-items: center; gap: 4px; }
+.viewer-count .eye { font-size: 14px; }
+.viewer-count .num { color: var(--text); font-weight: bold; }
+.header-info { display: flex; align-items: center; gap: 10px; }
+.timer-text { font-variant-numeric: tabular-nums; }
+.follow-btn {
+  background: var(--bilibili-pink); border: none; color: #fff; padding: 5px 16px;
+  border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: bold; transition: all 0.2s;
+}
+.follow-btn:hover { opacity: 0.9; transform: scale(1.05); }
+.follow-btn.followed { background: var(--border); color: var(--muted); }
+
+/* ===== MAIN LAYOUT ===== */
+.main { display: grid; grid-template-columns: 1fr 360px; height: calc(100vh - 50px); }
+
+/* ===== LEFT: Stream area ===== */
+.stream-area { display: flex; flex-direction: column; background: #000; position: relative; overflow: hidden; }
+.stream-info { position: absolute; top: 12px; left: 12px; z-index: 10; display: flex; align-items: center; gap: 8px; }
+.stream-badge-sm { background: var(--bilibili-pink); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+
+.stream-model { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
+.stream-model .placeholder { text-align: center; opacity: 0.5; }
+.stream-model .placeholder .emoji { font-size: 64px; margin-bottom: 12px; }
+
+/* Floating danmaku overlay */
+.floating-danmaku { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 5; }
+.floating-msg { position: absolute; color: #fff; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.9); white-space: nowrap; animation: floatRight 7s linear forwards; }
+@keyframes floatRight { from { transform: translateX(-100%); } to { transform: translateX(calc(100vw + 100%)); } }
+
+/* Gift animation overlay */
+.gift-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
+.gift-anim {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  font-size: 48px; animation: giftPop 1.5s ease forwards;
+}
+@keyframes giftPop {
+  0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  30% { transform: translate(-50%, -50%) scale(1.3); opacity: 1; }
+  60% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+}
+.gift-notify {
+  position: absolute; bottom: 120px; left: 20px; z-index: 16;
+  background: linear-gradient(90deg, rgba(251,114,153,0.9), rgba(251,114,153,0.3));
+  padding: 8px 16px; border-radius: 20px; font-size: 13px; color: #fff;
+  animation: slideInLeft 0.3s ease, fadeOutRight 0.5s ease 3s forwards;
+  white-space: nowrap;
+}
+@keyframes slideInLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes fadeOutRight { to { transform: translateX(50px); opacity: 0; } }
+
+/* SuperChat overlay */
+.sc-overlay { position: absolute; bottom: 140px; left: 50%; transform: translateX(-50%); max-width: 80%; z-index: 18; }
+.sc-card {
+  background: linear-gradient(135deg, #f6c656, #e8a930); border-radius: 10px; padding: 10px 16px;
+  color: #1a1a2e; animation: scPop 0.4s ease; max-width: 100%; word-wrap: break-word;
+}
+.sc-card .sc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 12px; }
+.sc-card .sc-badge { background: #1a1a2e; color: #f6c656; padding: 1px 6px; border-radius: 3px; font-weight: bold; font-size: 10px; }
+.sc-card .sc-user { font-weight: bold; }
+.sc-card .sc-text { font-size: 14px; line-height: 1.5; }
+.sc-card .sc-response { margin-top: 6px; font-size: 13px; color: rgba(26,26,46,0.7); border-top: 1px solid rgba(26,26,46,0.2); padding-top: 4px; }
+@keyframes scPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Response bubble */
+.response-overlay { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); max-width: 80%; z-index: 20; }
+.response-bubble { background: rgba(22, 27, 34, 0.92); border: 1px solid var(--bilibili-pink); border-radius: 12px; padding: 10px 16px; color: var(--text); font-size: 14px; line-height: 1.6; animation: fadeIn 0.3s ease; max-width: 100%; word-wrap: break-word; }
+.response-bubble .speaker { color: var(--bilibili-pink); font-size: 11px; font-weight: bold; margin-bottom: 3px; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== RIGHT: Chat panel ===== */
+.chat-panel { display: flex; flex-direction: column; background: var(--card); border-left: 1px solid var(--border); overflow: hidden; min-height: 0; }
+
+/* Chat header with tabs */
+.chat-header {
+  padding: 8px 16px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.chat-tabs { display: flex; gap: 0; }
+.chat-tab {
+  padding: 6px 14px; font-size: 13px; color: var(--muted); cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.2s;
+}
+.chat-tab.active { color: var(--bilibili-pink); border-bottom-color: var(--bilibili-pink); }
+.chat-tab:hover { color: var(--text); }
+.chat-meta { font-size: 12px; color: var(--muted); }
+
+/* Emotion bar */
+.emotion-section { padding: 8px 16px; border-bottom: 1px solid var(--border); }
+.emotion-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+.emotion-bar { display: flex; height: 20px; border-radius: 6px; overflow: hidden; gap: 1px; }
+.emotion-seg { display: flex; align-items: center; justify-content: center; font-size: 9px; color: #fff; transition: width 0.5s ease; min-width: 0; overflow: hidden; }
+.emotion-seg.happy { background: #f9c74f; }
+.emotion-seg.excited { background: #f94144; }
+.emotion-seg.calm { background: #90be6d; }
+.emotion-seg.curious { background: #43aa8b; }
+.emotion-seg.sad { background: #577590; }
+.emotion-seg.angry { background: #f3722c; }
+.emotion-seg.shy { background: #e07aaf; }
+.emotion-seg.proud { background: #9b5de5; }
+.emotion-seg.neutral { background: #4d5057; }
+
+/* Danmaku flow */
+.danmaku-flow { flex: 1; overflow-y: auto; padding: 6px 12px; min-height: 0; }
+.danmaku-flow::-webkit-scrollbar { width: 4px; }
+.danmaku-flow::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.msg { margin-bottom: 4px; animation: slideIn 0.2s ease; font-size: 13px; line-height: 1.5; }
+.msg .username { font-weight: bold; margin-right: 4px; }
+.msg .user-level {
+  display: inline-block; font-size: 9px; padding: 0 4px; border-radius: 3px;
+  margin-right: 3px; font-weight: bold; vertical-align: middle;
+}
+.msg .user-level.lv0 { background: #4d5057; color: #ccc; }
+.msg .user-level.lv1 { background: #5b8c00; color: #fff; }
+.msg .user-level.lv2 { background: #0078d4; color: #fff; }
+.msg .user-level.lv3 { background: #8e24aa; color: #fff; }
+.msg .user-level.lv4 { background: #e53935; color: #fff; }
+.msg.viewer .username { color: var(--bilibili-blue); }
+.msg.bot .username { color: var(--bilibili-pink); }
+.msg.bot .text { color: #fff; }
+.msg.system { color: var(--muted); font-size: 12px; padding: 2px 0; }
+.msg.gift-msg { color: var(--sc-gold); font-size: 12px; }
+.msg.gift-msg .gift-emoji { font-size: 14px; }
+.msg.enter-msg { color: var(--success); font-size: 12px; }
+.msg.sc-msg { background: var(--sc-bg); border: 1px solid rgba(246,198,86,0.3); border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; }
+.msg.sc-msg .sc-label { color: var(--sc-gold); font-size: 10px; font-weight: bold; }
+.msg.sc-msg .sc-content { color: var(--text); font-size: 13px; margin-top: 2px; }
+@keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+/* Gift bar */
+.gift-section { padding: 6px 12px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.gift-section .label { font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.gift-btns { display: flex; gap: 4px; flex-wrap: wrap; }
+.gift-btn {
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  padding: 3px 8px; border-radius: 12px; font-size: 11px; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; gap: 3px;
+}
+.gift-btn:hover { border-color: var(--sc-gold); color: var(--sc-gold); transform: scale(1.05); }
+.gift-btn .gemoji { font-size: 13px; }
+
+/* Quick questions */
+.quick-section { padding: 6px 12px; border-bottom: 1px solid var(--border); }
+.quick-section .label { font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.quick-btns { display: flex; flex-wrap: wrap; gap: 3px; }
+.qbtn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 3px 8px; border-radius: 10px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+.qbtn:hover { border-color: var(--bilibili-pink); color: var(--bilibili-pink); }
+
+/* Input area */
+.input-area { padding: 8px 12px; border-top: 1px solid var(--border); }
+.input-top { display: flex; gap: 6px; margin-bottom: 6px; }
+.input-top input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 10px; font-size: 13px; outline: none; }
+.input-top input:focus { border-color: var(--bilibili-pink); }
+.send-btn { background: var(--bilibili-pink); border: none; color: #fff; padding: 7px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s; }
+.send-btn:hover { opacity: 0.9; }
+
+/* SuperChat input (collapsible) */
+.sc-input { display: none; padding: 0 12px 6px; }
+.sc-input.visible { display: block; }
+.sc-input-row { display: flex; gap: 6px; margin-bottom: 4px; }
+.sc-input input { flex: 1; background: var(--sc-bg); border: 1px solid rgba(246,198,86,0.3); color: var(--sc-gold); border-radius: 6px; padding: 6px 10px; font-size: 12px; outline: none; }
+.sc-input input:focus { border-color: var(--sc-gold); }
+.sc-send-btn { background: var(--sc-gold); border: none; color: #1a1a2e; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+.sc-price { display: flex; gap: 4px; margin-top: 4px; }
+.sc-price-btn { background: var(--sc-bg); border: 1px solid rgba(246,198,86,0.2); color: var(--sc-gold); padding: 2px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+.sc-price-btn:hover { border-color: var(--sc-gold); }
+.sc-price-btn.active { background: var(--sc-gold); color: #1a1a2e; }
+
+/* Ctrl row */
+.ctrl-row { display: flex; gap: 4px; flex-wrap: wrap; }
+.ctrl-btn { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: all 0.2s; }
+.ctrl-btn:hover { border-color: var(--bilibili-blue); color: var(--bilibili-blue); }
+.ctrl-btn.active { background: var(--bilibili-pink); border-color: var(--bilibili-pink); color: #fff; }
+
+/* Viewer list panel (hidden by default) */
+.viewer-panel { display: none; flex: 1; overflow-y: auto; padding: 8px 12px; }
+.viewer-panel.visible { display: block; }
+.viewer-panel .viewer-item { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 12px; }
+.viewer-panel .viewer-item .vdot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+.viewer-panel .viewer-item .vname { color: var(--bilibili-blue); }
+.viewer-panel .viewer-item .vyou { color: var(--muted); font-size: 10px; }
+
+/* Collapsible sections */
+.collapse-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 12px; cursor: pointer; user-select: none;
+  border-top: 1px solid var(--border); transition: background 0.15s;
+}
+.collapse-header:hover { background: rgba(255,255,255,0.03); }
+.collapse-header .collapse-title {
+  font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.collapse-header .collapse-arrow {
+  font-size: 10px; color: var(--muted); transition: transform 0.25s ease;
+  display: inline-block;
+}
+.collapse-header.collapsed .collapse-arrow { transform: rotate(-90deg); }
+.collapse-body { overflow: hidden; transition: max-height 0.3s ease, opacity 0.2s ease; max-height: 500px; opacity: 1; }
+.collapse-body.hidden { max-height: 0; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">IGEM-sama</div>
+    <div class="header-room">
+      <span class="live-badge">LIVE</span>
+      <span class="room-title">IGEM-sama 合成生物学科普直播间</span>
+      <span class="room-category">科学</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="viewer-count"><span class="eye">&#128065;</span><span class="num" id="viewerNum">1</span></div>
+    <span class="timer-text" id="timer">00:00</span>
+    <div class="header-info">
+      <span id="llmMode" style="font-size:11px">Mock</span>
+      <span id="ttsStatus" style="font-size:11px"></span>
+      <button class="follow-btn" id="followBtn" onclick="toggleFollow()">关注</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="main">
+  <!-- Left: Stream area -->
+  <div class="stream-area">
+    <div class="stream-info">
+      <span class="stream-badge-sm">LIVE</span>
+    </div>
+    <div class="stream-model" id="streamModel">
+      <img id="live2dVideo" src="/api/video" style="max-width:100%;max-height:100%;object-fit:contain;display:none;image-rendering:auto">
+      <div class="placeholder" id="streamPlaceholder">
+        <div class="emoji">&#129516;</div>
+        <div>Loading Live2D...</div>
+      </div>
+    </div>
+    <div class="floating-danmaku" id="floatingDanmaku"></div>
+    <div class="gift-overlay" id="giftOverlay"></div>
+    <div class="sc-overlay" id="scOverlay" style="display:none"></div>
+    <div class="response-overlay" id="responseOverlay" style="display:none">
+      <div class="response-bubble">
+        <div class="speaker">IGEM-sama</div>
+        <div class="text" id="responseText"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Chat panel -->
+  <div class="chat-panel">
+    <div class="chat-header">
+      <div class="chat-tabs">
+        <div class="chat-tab active" data-tab="chat" onclick="switchTab('chat')">弹幕</div>
+        <div class="chat-tab" data-tab="viewers" onclick="switchTab('viewers')">观众(<span id="viewerCountTab">1</span>)</div>
+      </div>
+      <span class="chat-meta" id="msgCount">0 条</span>
+    </div>
+
+    <!-- Emotion bar (collapsible) -->
+    <div class="collapse-header" onclick="toggleCollapse(this)">
+      <span class="collapse-title">情绪状态</span>
+      <span class="collapse-arrow">&#9660;</span>
+    </div>
+    <div class="collapse-body" id="emotionBody">
+      <div class="emotion-section">
+        <div class="emotion-label">
+          <span>情绪</span>
+          <span id="emotionText">neutral</span>
+        </div>
+        <div class="emotion-bar" id="emotionBar"></div>
+      </div>
+    </div>
+
+    <!-- Danmaku flow (tab: chat) -->
+    <div class="danmaku-flow" id="danmakuFlow"></div>
+
+    <!-- Viewer list (tab: viewers) -->
+    <div class="viewer-panel" id="viewerPanel"></div>
+
+    <!-- Gift bar (collapsible) -->
+    <div class="collapse-header" onclick="toggleCollapse(this)">
+      <span class="collapse-title">送礼物</span>
+      <span class="collapse-arrow">&#9660;</span>
+    </div>
+    <div class="collapse-body" id="giftBody">
+      <div class="gift-section">
+        <div class="gift-btns" id="giftBtns"></div>
+      </div>
+    </div>
+
+    <!-- SuperChat input -->
+    <div class="sc-input" id="scInput">
+      <div class="sc-input-row">
+        <input type="text" id="scContent" placeholder="发送醒目留言..." onkeydown="if(event.key==='Enter')sendSuperChat()">
+        <button class="sc-send-btn" onclick="sendSuperChat()">SC</button>
+      </div>
+      <div class="sc-price" id="scPriceBtns">
+        <button class="sc-price-btn active" data-price="30" onclick="setSCPrice(30,this)">30</button>
+        <button class="sc-price-btn" data-price="50" onclick="setSCPrice(50,this)">50</button>
+        <button class="sc-price-btn" data-price="100" onclick="setSCPrice(100,this)">100</button>
+        <button class="sc-price-btn" data-price="500" onclick="setSCPrice(500,this)">500</button>
+      </div>
+    </div>
+
+    <!-- Quick questions (collapsible, collapsed by default) -->
+    <div class="collapse-header collapsed" onclick="toggleCollapse(this)">
+      <span class="collapse-title">快捷提问</span>
+      <span class="collapse-arrow">&#9660;</span>
+    </div>
+    <div class="collapse-body hidden" id="quickBody">
+      <div class="quick-section">
+        <div class="quick-btns">
+          <button class="qbtn" onclick="sendQuick('你好！')">你好！</button>
+          <button class="qbtn" onclick="sendQuick('你是谁？')">你是谁？</button>
+          <button class="qbtn" onclick="sendQuick('介绍一下你们的项目')">项目介绍</button>
+          <button class="qbtn" onclick="sendQuick('什么是iGEM？')">iGEM介绍</button>
+          <button class="qbtn" onclick="sendQuick('什么是合成生物学？')">合成生物学</button>
+          <button class="qbtn" onclick="sendQuick('什么是BioBrick？')">BioBrick</button>
+          <button class="qbtn" onclick="sendQuick('介绍一下你们的队伍')">队伍介绍</button>
+          <button class="qbtn" onclick="sendQuick('安全方面有什么考虑？')">安全规范</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="input-area">
+      <div class="input-top">
+        <input type="text" id="nameInput" placeholder="昵称" style="max-width:90px" value="DemoUser">
+        <input type="text" id="msgInput" placeholder="发送弹幕..." onkeydown="if(event.key==='Enter')sendDanmaku()">
+        <button class="send-btn" onclick="sendDanmaku()">发送</button>
+      </div>
+      <div class="collapse-header collapsed" onclick="toggleCollapse(this)" style="padding:2px 0;border:none">
+        <span class="collapse-title">控制面板</span>
+        <span class="collapse-arrow">&#9660;</span>
+      </div>
+      <div class="collapse-body hidden" id="ctrlBody">
+        <div class="ctrl-row" style="padding-top:4px">
+          <button class="ctrl-btn" id="autoViewerBtn" onclick="toggleAutoViewers()">模拟观众</button>
+          <button class="ctrl-btn" id="autonomousBtn" onclick="toggleAutonomous()">自主行为</button>
+          <button class="ctrl-btn" onclick="triggerAutonomous()">主动发言</button>
+          <button class="ctrl-btn" id="scToggleBtn" onclick="toggleSCInput()">SC留言</button>
+          <button class="ctrl-btn" onclick="setEmotion('happy')">&#128522;开心</button>
+          <button class="ctrl-btn" onclick="setEmotion('curious')">&#129300;好奇</button>
+          <button class="ctrl-btn" onclick="setEmotion('shy')">&#128563;害羞</button>
+          <button class="ctrl-btn" onclick="setEmotion('proud')">&#128526;得意</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// State
+let msgCount = 0;
+let interactionCount = 0;
+let autoViewersOn = false;
+let autonomousOn = true;
+let isFollowed = false;
+let responseTimer = null;
+let scTimer = null;
+let startTime = Date.now();
+let scPrice = 30;
+let onlineViewers = ['DemoUser'];
+const emotionColors = {
+  happy: '#f9c74f', excited: '#f94144', calm: '#90be6d', curious: '#43aa8b',
+  sad: '#577590', angry: '#f3722c', shy: '#e07aaf', proud: '#9b5de5', neutral: '#4d5057'
+};
+const gifts = {};
+
+// SSE connection
+const evtSource = new EventSource('/api/stream');
+evtSource.onmessage = function(e) {
+  const data = JSON.parse(e.data);
+  if (data.type === 'danmaku') {
+    addDanmaku(data.username, data.content, false);
+    addDanmaku('IGEM-sama', data.response, true);
+    showResponse(data.response);
+    addFloatingDanmaku(data.content);
+    interactionCount++;
+    updateStatus(data.emotion, data.intensity);
+  } else if (data.type === 'autonomous') {
+    addSystemMsg('[自主] ' + data.response);
+    showResponse(data.response);
+    updateStatus(data.emotion);
+  } else if (data.type === 'emotion_change') {
+    updateStatus(data.emotion, data.intensity);
+  } else if (data.type === 'gift') {
+    addGiftMsg(data.username, data.gift, data.count, data.emoji);
+    addDanmaku('IGEM-sama', data.response, true);
+    showResponse(data.response);
+    showGiftAnim(data.emoji);
+    showGiftNotify(data.username, data.gift, data.count, data.emoji);
+    interactionCount++;
+    updateStatus(data.emotion);
+  } else if (data.type === 'superchat') {
+    addSCMsg(data.username, data.content, data.price);
+    addDanmaku('IGEM-sama', data.response, true);
+    showSCOverlay(data.username, data.content, data.price, data.response);
+    interactionCount++;
+    updateStatus(data.emotion);
+  } else if (data.type === 'viewer_enter') {
+    if (!onlineViewers.includes(data.username)) onlineViewers.push(data.username);
+    addEnterMsg(data.username);
+    updateViewerCount(data.viewer_count);
+  } else if (data.type === 'viewer_leave') {
+    onlineViewers = onlineViewers.filter(v => v !== data.username);
+    addSystemMsg(data.username + ' 离开了直播间');
+    updateViewerCount(data.viewer_count);
+  }
+};
+evtSource.onerror = function() { console.log('SSE reconnecting...'); };
+
+// Timer
+setInterval(() => {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  document.getElementById('timer').textContent = m + ':' + s;
+}, 1000);
+
+// Poll status
+setInterval(() => {
+  fetch('/api/status').then(r => r.json()).then(s => {
+    updateStatus(s.emotion, s.intensity);
+    interactionCount = s.interaction_count;
+    autoViewersOn = s.auto_viewers;
+    autonomousOn = s.autonomous_enabled;
+    if (s.llm_mode) document.getElementById('llmMode').textContent = s.llm_mode === 'deepseek-chat' ? 'AI' : 'Mock';
+    if (s.tts_enabled !== undefined) document.getElementById('ttsStatus').textContent = s.tts_enabled ? 'TTS' : '';
+    if (s.viewer_count !== undefined) updateViewerCount(s.viewer_count);
+    if (s.online_viewers) { onlineViewers = s.online_viewers; updateViewerPanel(); }
+    if (s.available_gifts) buildGiftBtns(s.available_gifts);
+    updateButtons();
+  }).catch(() => {});
+}, 5000);
+
+// Build gift buttons
+function buildGiftBtns(available) {
+  const giftDefs = {
+    '\u8fa3\u6761': {'emoji':'\ud83c\udf36\ufe0f','price':1},
+    '\u5c0f\u7535\u89c6': {'emoji':'\ud83d\udcfa','price':5},
+    'B\u57ed\u5783': {'emoji':'\ud83d\udc8e','price':10},
+    '\u55b5\u5a18': {'emoji':'\ud83d\udc31','price':20},
+    '\u793c\u7269\u76d2': {'emoji':'\ud83c\udf81','price':50}
+  };
+  const cont = document.getElementById('giftBtns');
+  cont.innerHTML = '';
+  available.forEach(name => {
+    const def = giftDefs[name] || {'emoji':'\ud83c\udf81','price':0};
+    const btn = document.createElement('button');
+    btn.className = 'gift-btn';
+    btn.innerHTML = '<span class="gemoji">' + def.emoji + '</span>' + escapeHtml(name);
+    btn.onclick = () => sendGift(name);
+    cont.appendChild(btn);
+  });
+}
+
+// Tab switching
+function switchTab(tab) {
+  document.querySelectorAll('.chat-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('danmakuFlow').style.display = tab === 'chat' ? '' : 'none';
+  document.getElementById('viewerPanel').classList.toggle('visible', tab === 'viewers');
+  if (tab === 'viewers') updateViewerPanel();
+}
+
+function updateViewerPanel() {
+  const panel = document.getElementById('viewerPanel');
+  panel.innerHTML = onlineViewers.map(v =>
+    '<div class="viewer-item"><span class="vdot"></span><span class="vname">' + escapeHtml(v) + '</span>' +
+    (v === 'DemoUser' ? '<span class="vyou">(你)</span>' : '') + '</div>'
+  ).join('');
+}
+
+function updateViewerCount(count) {
+  document.getElementById('viewerNum').textContent = count;
+  document.getElementById('viewerCountTab').textContent = count;
+}
+
+// Follow button
+function toggleFollow() {
+  isFollowed = !isFollowed;
+  const btn = document.getElementById('followBtn');
+  btn.textContent = isFollowed ? '已关注' : '关注';
+  btn.classList.toggle('followed', isFollowed);
+}
+
+// Send functions
+function sendDanmaku() {
+  const username = document.getElementById('nameInput').value.trim() || 'DemoUser';
+  const content = document.getElementById('msgInput').value.trim();
+  if (!content) return;
+  fetch('/api/danmaku', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username, content})
+  }).then(r => r.json()).then(data => {
+    if (data.error === 'rate_limited') addSystemMsg('\u26a0\ufe0f \u53d1\u9001\u592a\u5feb\u4e86\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5');
+  }).catch(() => {});
+  document.getElementById('msgInput').value = '';
+}
+
+function sendQuick(text) {
+  const username = document.getElementById('nameInput').value.trim() || 'DemoUser';
+  fetch('/api/danmaku', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, content: text}) });
+}
+
+function sendGift(giftName) {
+  const username = document.getElementById('nameInput').value.trim() || 'DemoUser';
+  fetch('/api/gift', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, gift: giftName, count: 1}) });
+}
+
+function sendSuperChat() {
+  const username = document.getElementById('nameInput').value.trim() || 'DemoUser';
+  const content = document.getElementById('scContent').value.trim();
+  if (!content) return;
+  fetch('/api/superchat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username, content, price: scPrice}) });
+  document.getElementById('scContent').value = '';
+}
+
+function setSCPrice(price, el) {
+  scPrice = price;
+  document.querySelectorAll('.sc-price-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function toggleSCInput() {
+  const sc = document.getElementById('scInput');
+  sc.classList.toggle('visible');
+}
+
+function setEmotion(emotion) {
+  fetch('/api/emotion', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({emotion, intensity: 0.7}) });
+}
+
+function triggerAutonomous() {
+  fetch('/api/trigger', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}) });
+}
+
+function toggleAutoViewers() {
+  autoViewersOn = !autoViewersOn;
+  fetch('/api/auto_viewers', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: autoViewersOn}) });
+  updateButtons();
+}
+
+function toggleAutonomous() {
+  autonomousOn = !autonomousOn;
+  fetch('/api/autonomous_toggle', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: autonomousOn}) });
+  updateButtons();
+}
+
+function updateButtons() {
+  document.getElementById('autoViewerBtn').className = 'ctrl-btn' + (autoViewersOn ? ' active' : '');
+  document.getElementById('autonomousBtn').className = 'ctrl-btn' + (autonomousOn ? ' active' : '');
+}
+
+// Display functions
+function getUserLevel(username) {
+  if (username === 'IGEM-sama') return 'lv4';
+  const hash = username.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+  return 'lv' + (hash % 5);
+}
+
+function addDanmaku(username, text, isBot) {
+  const flow = document.getElementById('danmakuFlow');
+  const div = document.createElement('div');
+  div.className = 'msg' + (isBot ? ' bot' : ' viewer');
+  const level = getUserLevel(username);
+  div.innerHTML = '<span class="user-level ' + level + '">' + level.toUpperCase() + '</span>' +
+    '<span class="username">' + escapeHtml(username) + '</span><span class="text">' + escapeHtml(text) + '</span>';
+  flow.appendChild(div);
+  flow.scrollTop = flow.scrollHeight;
+  msgCount++;
+  document.getElementById('msgCount').textContent = msgCount + ' \u6761';
+}
+
+function addSystemMsg(text) {
+  const flow = document.getElementById('danmakuFlow');
+  const div = document.createElement('div');
+  div.className = 'msg system';
+  div.textContent = text;
+  flow.appendChild(div);
+  flow.scrollTop = flow.scrollHeight;
+}
+
+function addGiftMsg(username, gift, count, emoji) {
+  const flow = document.getElementById('danmakuFlow');
+  const div = document.createElement('div');
+  div.className = 'msg gift-msg';
+  div.innerHTML = '<span class="gift-emoji">' + emoji + '</span> ' + escapeHtml(username) + ' \u9001\u51fa ' + escapeHtml(gift) + ' x' + count;
+  flow.appendChild(div);
+  flow.scrollTop = flow.scrollHeight;
+}
+
+function addEnterMsg(username) {
+  const flow = document.getElementById('danmakuFlow');
+  const div = document.createElement('div');
+  div.className = 'msg enter-msg';
+  div.textContent = '\ud83d\udc49 ' + username + ' \u8fdb\u5165\u4e86\u76f4\u64ad\u95f4';
+  flow.appendChild(div);
+  flow.scrollTop = flow.scrollHeight;
+}
+
+function addSCMsg(username, content, price) {
+  const flow = document.getElementById('danmakuFlow');
+  const div = document.createElement('div');
+  div.className = 'msg sc-msg';
+  div.innerHTML = '<span class="sc-label">SC \u00a5' + price + '</span> <strong>' + escapeHtml(username) + '</strong><div class="sc-content">' + escapeHtml(content) + '</div>';
+  flow.appendChild(div);
+  flow.scrollTop = flow.scrollHeight;
+}
+
+function showResponse(text) {
+  const overlay = document.getElementById('responseOverlay');
+  document.getElementById('responseText').textContent = text;
+  overlay.style.display = 'block';
+  clearTimeout(responseTimer);
+  responseTimer = setTimeout(() => { overlay.style.display = 'none'; }, 8000);
+}
+
+function showGiftAnim(emoji) {
+  const overlay = document.getElementById('giftOverlay');
+  const div = document.createElement('div');
+  div.className = 'gift-anim';
+  div.textContent = emoji;
+  overlay.appendChild(div);
+  setTimeout(() => div.remove(), 1500);
+}
+
+function showGiftNotify(username, gift, count, emoji) {
+  const overlay = document.getElementById('giftOverlay');
+  const div = document.createElement('div');
+  div.className = 'gift-notify';
+  div.textContent = emoji + ' ' + username + ' \u9001\u51fa ' + gift + ' x' + count;
+  overlay.appendChild(div);
+  setTimeout(() => div.remove(), 3500);
+}
+
+function showSCOverlay(username, content, price, response) {
+  const overlay = document.getElementById('scOverlay');
+  overlay.innerHTML = '<div class="sc-card"><div class="sc-header"><span class="sc-badge">SC \u00a5' + price + '</span><span class="sc-user">' + escapeHtml(username) + '</span></div><div class="sc-text">' + escapeHtml(content) + '</div>' +
+    (response ? '<div class="sc-response">' + escapeHtml(response) + '</div>' : '') + '</div>';
+  overlay.style.display = 'block';
+  clearTimeout(scTimer);
+  scTimer = setTimeout(() => { overlay.style.display = 'none'; }, 10000);
+}
+
+function addFloatingDanmaku(text) {
+  const container = document.getElementById('floatingDanmaku');
+  const div = document.createElement('div');
+  div.className = 'floating-msg';
+  div.textContent = text;
+  div.style.top = (10 + Math.random() * 60) + '%';
+  container.appendChild(div);
+  setTimeout(() => div.remove(), 7000);
+}
+
+function updateStatus(emotion, intensity) {
+  if (!emotion) return;
+  document.getElementById('emotionText').textContent = emotion + (intensity ? ' (' + Math.round(intensity * 100) + '%)' : '');
+  const bar = document.getElementById('emotionBar');
+  bar.innerHTML = '';
+  const seg = document.createElement('div');
+  seg.className = 'emotion-seg ' + emotion;
+  seg.style.width = '100%';
+  seg.textContent = emotion;
+  bar.appendChild(seg);
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Collapsible sections
+function toggleCollapse(header) {
+  header.classList.toggle('collapsed');
+  const body = header.nextElementSibling;
+  body.classList.toggle('hidden');
+}
+
+// Initial
+updateButtons();
+addSystemMsg('\ud83d\udcf9 IGEM-sama \u76f4\u64ad\u95f4\u5df2\u542f\u52a8');
+addSystemMsg('\ud83d\udca1 \u53d1\u9001\u5f39\u5e55\u4e0e IGEM-sama \u4e92\u52a8\uff0c\u6216\u4f7f\u7528\u5feb\u6377\u63d0\u95ee\u6309\u94ae');
+addSystemMsg('\ud83c\udf81 \u70b9\u51fb\u793c\u7269\u6309\u94ae\u9001\u793c\u7269\uff0cSC\u7559\u8a00\u83b7\u5f97\u91cd\u70b9\u56de\u590d');
+
+// Detect Live2D video stream
+fetch('/api/status').then(r => r.json()).then(s => {
+  if (s.live2d) {
+    const img = document.getElementById('live2dVideo');
+    const ph = document.getElementById('streamPlaceholder');
+    img.style.display = 'block';
+    ph.style.display = 'none';
+    img.onerror = function() {
+      img.style.display = 'none';
+      ph.style.display = 'block';
+      ph.querySelector('.emoji').textContent = '\ud83c\udfac';
+      ph.querySelector('div:last-child').textContent = 'Live2D \u8fde\u63a5\u4e2d\u65ad';
+    };
+  } else {
+    const ph = document.getElementById('streamPlaceholder');
+    ph.querySelector('.emoji').textContent = '\ud83e\uddec';
+    ph.querySelector('div:last-child').textContent = 'Live2D \u672a\u542f\u7528 (python demo.py \u542f\u52a8)';
+  }
+  if (s.tts_enabled) document.getElementById('ttsStatus').textContent = 'TTS';
+  if (s.viewer_count !== undefined) updateViewerCount(s.viewer_count);
+  if (s.online_viewers) { onlineViewers = s.online_viewers; updateViewerPanel(); }
+  if (s.available_gifts) buildGiftBtns(s.available_gifts);
+}).catch(() => {});
+
+// Simulate viewer count fluctuation
+let simViewerBase = 42;
+setInterval(() => {
+  if (autoViewersOn) {
+    simViewerBase += Math.random() > 0.5 ? 1 : -1;
+    simViewerBase = Math.max(20, Math.min(200, simViewerBase));
+  }
+}, 15000);
+</script>
+</body>
+</html>
