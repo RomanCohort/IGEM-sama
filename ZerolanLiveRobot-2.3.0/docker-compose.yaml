@@ -1,0 +1,58 @@
+# IGEM-sama Docker Compose
+# Usage: docker-compose up -d
+#
+# Prerequisites:
+#   1. Copy config.igem-sama.yaml -> config.yaml and edit credentials
+#   2. Place team documents in knowledge_base/docs/
+#
+# Services:
+#   - igem-sama:    Main bot (connects to Bilibili, LLM, TTS)
+#   - milvus:       Vector database for RAG knowledge base
+#   - dashboard:    Analytics web dashboard (http://localhost:8080)
+
+version: "3.8"
+
+services:
+  igem-sama:
+    build: .
+    container_name: igem-sama
+    restart: unless-stopped
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./data:/app/data
+      - ./knowledge_base/docs:/app/knowledge_base/docs:ro
+      - ./resources:/app/resources:ro
+    depends_on:
+      - milvus
+    environment:
+      - TZ=Asia/Shanghai
+    # If running Live2D on host, don't map display
+    # If headless mode, no display needed
+
+  milvus:
+    image: milvusdb/milvus:v2.3-latest
+    container_name: igem-sama-milvus
+    restart: unless-stopped
+    ports:
+      - "11010:19530"
+    volumes:
+      - milvus_data:/var/lib/milvus
+    environment:
+      - TZ=Asia/Shanghai
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: igem-sama-dashboard
+    restart: unless-stopped
+    command: python -c "from analytics.dashboard import AnalyticsDashboard; from analytics.collector import StreamAnalytics; AnalyticsDashboard(StreamAnalytics(), host='0.0.0.0', port=8080).start()"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data:ro
+    environment:
+      - TZ=Asia/Shanghai
+
+volumes:
+  milvus_data:

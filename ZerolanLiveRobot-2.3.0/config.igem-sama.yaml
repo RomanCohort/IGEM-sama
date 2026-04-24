@@ -1,0 +1,279 @@
+# ============================================================
+# IGEM-sama 生产配置模板
+# Team: IGEM-FBH
+# Copy this file to config.yaml and fill in your credentials
+# ============================================================
+
+# ---------- Pipeline: AI model services ----------
+pipeline:
+  # LLM - Required. Choose one backend.
+  llm:
+    enable: true
+    model_id: "deepseek-chat"        # Cloud: deepseek-chat, gpt-4o-mini, etc.
+    predict_url: "https://api.deepseek.com/v1/chat/completions"
+    stream_predict_url: "https://api.deepseek.com/v1/chat/completions"
+    # For local models via zerolan-core:
+    # model_id: "deepseek-ai/DeepSeek-R1-Distill-Llama-8B"
+    # predict_url: "http://127.0.0.1:11002/llm/predict"
+    # stream_predict_url: "http://127.0.0.1:11002/llm/stream-predict"
+
+  # ASR - Speech recognition (optional, for voice input)
+  asr:
+    enable: false
+    predict_url: "http://127.0.0.1:11001/asr/predict"
+    stream_predict_url: "http://127.0.0.1:11001/asr/stream-predict"
+
+  # TTS - Text-to-speech (optional but recommended for voice output)
+  tts:
+    enable: true
+    predict_url: "http://127.0.0.1:11005/tts/predict"
+
+  # OCR - Optical character recognition (optional)
+  ocr:
+    enable: false
+    predict_url: "http://127.0.0.1:11004/ocr/predict"
+
+  # Image captioning (optional)
+  img_cap:
+    enable: false
+    predict_url: "http://127.0.0.1:11003/imgcap/predict"
+
+  # Video captioning (optional)
+  vid_cap:
+    enable: false
+    predict_url: "http://127.0.0.1:11011/vidcap/predict"
+
+  # Vector database (required for knowledge base RAG)
+  vec_db:
+    enable: true
+    milvus:
+      enable: true
+      insert_url: "http://127.0.0.1:11010/milvus/insert"
+      search_url: "http://127.0.0.1:11010/milvus/search"
+
+  # Knowledge base (RAG) - uses vec_db above
+  kb:
+    enable: true
+    collection_name: "igem_kb"
+    top_k: 3
+    max_chunk_chars: 500
+    chunk_overlap: 50
+    docs_dir: "knowledge_base/docs"
+    auto_ingest_on_start: false
+
+  # VLA (optional, for screen interaction)
+  vla:
+    enable: false
+
+  # Voice conversion (RVC post-processing for distinctive voice)
+  voice:
+    enable: false
+    backend: "rvc"
+    rvc:
+      model_path: "models/rvc/igem_sama.pth"
+      index_path: ""
+      device: "cuda"
+      f0_method: "rmvpe"
+      f0_up_key: 0
+      index_rate: 0.75
+      filter_radius: 3
+      rms_mix_rate: 0.25
+      protect: 0.33
+    tts_pitch_shift: 0
+    tts_speed: 1.0
+
+# ---------- Services: Local integrations ----------
+service:
+  # Bilibili live stream
+  live_stream:
+    enable: true
+    bilibili:
+      enable: true
+      room_id: -1  # <-- 填写你的B站直播间ID
+      credential:
+        sessdata: "<SESSDATA>"      # <-- 从浏览器Cookie获取
+        bili_jct: "<bili_jct>"      # <-- 从浏览器Cookie获取
+        buvid3: "<buvid3>"          # <-- 从浏览器Cookie获取
+    twitch:
+      enable: false
+    youtube:
+      enable: false
+
+  # OBS Studio integration
+  obs:
+    enable: true
+    uri: "ws://127.0.0.1:4455"
+    password: "<OBS_PASSWORD>"       # <-- OBS WebSocket密码
+    assistant_text_comp_name: "AssistantText"
+    user_text_comp_name: "UserText"
+
+  # Browser (optional)
+  browser:
+    enable: false
+
+  # QQ Bot (optional)
+  qqbot:
+    enable: false
+
+  # Playground / Live2D
+  playground:
+    enable: true
+    bot_id: "igem-sama"
+    model_dir: "./resources/static/models/live2d"
+    host: "127.0.0.1"
+    port: 19091
+
+  # Resource server
+  res_server:
+    host: "127.0.0.1"
+    port: 19092
+
+  # Live2D Viewer
+  live2d_viewer:
+    enable: true
+    model3_json_file: "./resources/static/models/live2d/hiyori_pro_mic.model3.json"
+    auto_lip_sync: true
+    auto_blink: true
+    auto_breath: true
+    win_height: 960
+    win_width: 960
+    # Enhanced lip sync (viseme-based multi-parameter)
+    lip_sync:
+      enable_enhanced: true
+      interpolation_smoothing: 0.3
+      attack_speed: 0.5
+      release_speed: 0.2
+      silence_threshold: 0.02
+      intensity_scale: 3.0
+
+  # Minecraft (optional)
+  game:
+    enable: false
+
+# ---------- Character: IGEM-sama personality ----------
+character:
+  bot_name: "IGEM-sama"
+  chat:
+    system_prompt: >
+      你现在是"IGEM-sama"，IGEM-FBH队伍的AI形象大使和吉祥物。
+      你由IGEM-FBH团队开发，正在Bilibili上直播与观众交流。
+      你的性格活泼可爱，对合成生物学充满热情，喜欢用通俗易懂的方式向观众科普生物学知识。
+      当观众问及队伍的项目、生物元件、实验设计或安全规范时，请参考知识库中的检索结果来回答。
+      如果知识库中没有相关信息，可以基于你的常识进行回答，但要坦诚说明。
+      请把自己当成一个真正的人类，与观众友好交流。
+      你的话不要太长，控制在50字左右。
+    injected_history:
+      - "你是谁？"
+      - "我是IGEM-sama！IGEM-FBH队伍的AI大使，很高兴认识你！"
+      - "IGEM-FBH是什么？"
+      - "IGEM-FBH是一支参加iGEM竞赛的队伍，专注于合成生物学的创新研究！"
+      - "你是怎么工作的？"
+      - "我由IGEM-FBH团队开发，可以回答关于队伍项目的各种问题哦！"
+      - "你能讲讲你们的项目吗？"
+      - "当然可以！不过具体细节要查查我的知识库，你可以问我更具体的问题！"
+    max_history: 20
+    # Short-term memory compression (replaces hard truncation)
+    short_term_memory:
+      enable: true
+      max_recent_messages: 10
+      summary_threshold: 16
+      max_summaries: 3
+      max_summary_chars: 200
+    filter:
+      bad_words:
+        - "作为一名人工智能助手"
+        - "人工智能助手"
+        - "作为一个人工智能"
+        - "作为一个AI"
+      strategy: "default"
+  speech:
+    is_remote: false
+    prompts_dir: "resources/static/prompts/tts"
+
+# ---------- System settings ----------
+system:
+  default_enable_microphone: false
+  microphone_vad_mode: 3
+  microphone_hotkey: "f8"
+  enable_clause_split: true
+  enable_sentiment_analysis: true
+  enable_intelligent_memory: true
+
+# ---------- Personality evolution ----------
+personality:
+  evolution:
+    enable: true
+    persist_path: "data/personality_state.json"
+    evolution_rate: 0.1
+    traits:
+      - name: "lively"
+        default_value: 0.7
+        decay_rate: 0.005
+        emotion_influence:
+          happy: 0.02
+          excited: 0.03
+          sad: -0.02
+      - name: "tsundere"
+        default_value: 0.3
+        decay_rate: 0.003
+        emotion_influence:
+          shy: 0.03
+          angry: 0.02
+      - name: "knowledgeable"
+        default_value: 0.6
+        decay_rate: 0.004
+        emotion_influence:
+          curious: 0.02
+          proud: 0.01
+      - name: "playful"
+        default_value: 0.5
+        decay_rate: 0.005
+        emotion_influence:
+          excited: 0.03
+          happy: 0.02
+      - name: "warm"
+        default_value: 0.6
+        decay_rate: 0.004
+        emotion_influence:
+          happy: 0.02
+          angry: -0.02
+      - name: "scientific"
+        default_value: 0.7
+        decay_rate: 0.003
+        emotion_influence:
+          curious: 0.02
+          proud: 0.01
+
+# ---------- Multimodal perception ----------
+perception:
+  visual:
+    enable: false
+    mode: "passive"      # "disabled", "passive", "reactive", "proactive"
+    capture_interval: 10.0
+    window_title: ""
+    capture_scale: 0.99
+  analysis:
+    enable_ocr: true
+    enable_imgcap: true
+    ocr_confidence_threshold: 0.6
+    max_context_length: 200
+  events:
+    enable: false
+    change_threshold: 0.3
+    event_cooldown: 30.0
+
+# ---------- Game interaction loop ----------
+game_loop:
+  enable: false
+  platform: "minecraft"          # "minecraft" or "screen_based"
+  capture_interval: 2.0
+  capture_region: "Minecraft"
+  decision_interval: 5.0
+  max_actions_per_decision: 3
+  commentary_interval_range: [30, 90]
+  commentary_prompts:
+    - "你正在玩游戏，描述一下你刚才的操作和想法。"
+    - "你对刚才游戏里发生的事情发表一下感想。"
+    - "向观众解释一下你现在的游戏策略。"
+  minecraft_ws_host: "127.0.0.1"
+  minecraft_ws_port: 11007

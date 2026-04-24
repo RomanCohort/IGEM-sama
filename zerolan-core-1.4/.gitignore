@@ -1,0 +1,10 @@
+/.vscode
+**/__pycache__
+config.yaml
+/.idea
+config.yaml.bak
+test.py
+/.temp
+*.png
+/.data
+/scripts
